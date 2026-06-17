@@ -1,0 +1,108 @@
+// src/users/schemas/user.schema.ts
+
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { HydratedDocument } from "mongoose";
+
+// --------------------
+// Sheet Configuration
+// --------------------
+@Schema({ _id: false })
+export class SheetConfiguration {
+  @Prop({ default: null })
+  id!: string;
+
+  @Prop({ default: null })
+  sheetTabName!: string;
+
+  @Prop({ default: null })
+  taskNameIndex!: number;
+
+  @Prop({ default: null })
+  durationIndex!: number;
+
+  @Prop({ default: null })
+  statusIndex!: number;
+
+  @Prop({ default: null })
+  dateIndex!: number;
+}
+
+export const SheetConfigurationSchema =
+  SchemaFactory.createForClass(SheetConfiguration);
+
+// --------------------
+// User Configuration
+// --------------------
+@Schema({ _id: false })
+export class UserConfiguration {
+  @Prop({ default: false })
+  validatedGoogle!: boolean;
+
+  @Prop({ default: null })
+  googleRefreshToken!: string;
+
+  @Prop({ default: false })
+  validatedZoho!: boolean;
+
+  @Prop({ default: null })
+  zohoRefreshToken!: string;
+
+  @Prop({ default: null })
+  cronOption!: string;
+
+  @Prop({ default: null })
+  protalId!:string;
+
+  @Prop({ default: null })
+  zohoUserId!: string;
+
+  @Prop({ type: [String], default: [] })
+  projects!: string[];
+
+  @Prop({ type: SheetConfigurationSchema, default: null })
+  sheet!: SheetConfiguration | null;
+
+  @Prop({ default: null })
+  eodMailRecipient!: string;
+
+  @Prop({ default: null })
+  jobFailureTriggerRecipient!: string;
+}
+
+export const UserConfigurationSchema =
+  SchemaFactory.createForClass(UserConfiguration);
+
+// --------------------
+// Main User Schema
+// --------------------
+export type UserDocument = HydratedDocument<User>;
+
+@Schema({
+  timestamps: true,
+})
+export class User {
+  @Prop({
+    required: true,
+    trim: true,
+  })
+  name!: string;
+
+  @Prop({
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+  })
+  email!: string;
+
+  @Prop({ default: null })
+  userProfileUrl!: string;
+
+  @Prop({
+    type: UserConfigurationSchema,
+    default: () => ({}),
+  })
+  configuration!: UserConfiguration;
+}
+
+export const UserSchema = SchemaFactory.createForClass(User);
