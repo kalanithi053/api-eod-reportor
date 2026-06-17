@@ -25,6 +25,8 @@ export class ZohoController {
   ) {
     await this.zohoService.generateToken(code, state);
     const frontendUrl = this.configService.get<string>("FRONTEND_REDIRECT_URL");
-    return res.redirect(`${frontendUrl}/connect?oauth=zoho&status=success`);
+    return res.redirect(
+      `${frontendUrl}/connect?path=${encodeURIComponent("/settings?tab=oauth")}`,
+    );
   }
 }

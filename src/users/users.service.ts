@@ -71,4 +71,15 @@ export class UsersService {
 
     return user.save();
   }
+
+  async updateUserDetails(id: string, userData: User) {
+    this.logger.debug("updateUserDetails", id, userData);
+    const user = await this.userModel
+      .findByIdAndUpdate(id, { ...userData }, { new: true })
+      .exec();
+    if (!user) {
+      throw new NotFoundException("user not found");
+    }
+    return user;
+  }
 }

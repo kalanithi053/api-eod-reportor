@@ -1,4 +1,4 @@
-import { Controller, Get, Req, UseGuards } from "@nestjs/common";
+import { Controller, Get, Patch, Req, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "src/guards/jwt-auth.guard";
 import { UsersService } from "./users.service";
 
@@ -10,5 +10,11 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   revokeZohoRefreshToken(@Req() req: any) {
     return this.usersService.revokeZohoRefreshToken(req?.user?._id);
+  }
+
+  @Patch("")
+  @UseGuards(JwtAuthGuard)
+  updateUserDetails(@Req() req: any) {
+    return this.usersService.updateUserDetails(req?.user?._id, req.body);
   }
 }

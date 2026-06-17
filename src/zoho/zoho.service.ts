@@ -39,7 +39,7 @@ export class ZohoService {
         code,
       },
     });
-    this.logger.log("Zoho token response: ", response);
+    this.logger.log("Zoho token response: ", JSON.stringify(response));
     if (!response) {
       throw new Error("Failed to generate Zoho token");
     }
