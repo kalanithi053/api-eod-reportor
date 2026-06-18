@@ -28,6 +28,7 @@ export class SheetConfiguration {
 
   @Prop({ default: null })
   projectIndex!: number;
+
 }
 
 export const SheetConfigurationSchema =
@@ -88,6 +89,9 @@ export class UserConfiguration {
 
   @Prop({ default: null })
   jobFailureTriggerRecipient!: string;
+
+  @Prop({ default: false })
+  triggerCron!: boolean;
 }
 
 export const UserConfigurationSchema =

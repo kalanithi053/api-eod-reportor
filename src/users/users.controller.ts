@@ -1,10 +1,14 @@
 import { Controller, Get, Patch, Req, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "src/guards/jwt-auth.guard";
+import { ZohoService } from "src/zoho/zoho.service";
 import { UsersService } from "./users.service";
 
 @Controller("users")
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly zohoService: ZohoService,
+  ) {}
 
   @Get("revoke/zoho")
   @UseGuards(JwtAuthGuard)
@@ -25,5 +29,16 @@ export class UsersController {
       req.body.projects,
       req.body.defaultProject,
     );
+  }
+
+  @Get("trigger/cron-job")
+  async triggerJob() {
+    const users = await this.usersService.findAll();
+    const response = await Promise.all([
+      users
+        .filter((user) => user.configuration.triggerCron && user.configuration.validatedGoogle)
+        .map((user) => this.zohoService.triggerJob(user)),
+    ]);
+    return response;
   }
 }

@@ -1,118 +1,140 @@
-import { Injectable, Logger } from "@nestjs/common";
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotImplementedException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { format } from "date-fns/format";
 import { ApiService } from "src/common/api.service";
+import { GoogleService } from "src/google/google.service";
+import { StatusMailPayload } from "src/types/report.interface";
 import { UserDocument } from "src/users/schemas/user.schema";
 import { UsersService } from "src/users/users.service";
+import { getLogBuiilder, sendResponse } from "src/utils/getLog.builder";
+import { htmlGenerator } from "src/utils/mail-template";
 import { createOAuthAuthorizeUrl } from "src/utils/oauth.util";
+import { generateSubject } from "src/utils/stringManipulation.helper";
+
+interface ZohoTokenResponse {
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  api_domain?: string;
+  token_type?: string;
+}
 
 @Injectable()
 export class ZohoService {
   private readonly logger = new Logger(ZohoService.name);
 
+  private readonly authUrl: string;
+  private readonly clientId: string;
+  private readonly clientSecret: string;
+  private readonly redirectUri: string;
+  private readonly scopes: string;
+  private readonly projectApiBaseUrl: string;
+
   constructor(
     private readonly configService: ConfigService,
     private readonly userService: UsersService,
     private readonly apiService: ApiService,
-  ) {}
-
-  private async retry<T>(
-    fn: () => Promise<T>,
-    retries = 3,
-    delay = 1000,
-  ): Promise<T> {
-    try {
-      return await fn();
-    } catch (error: any) {
-      if (
-        retries > 0 &&
-        ["ECONNRESET", "ETIMEDOUT", "ECONNABORTED"].includes(error.code)
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
-
-        return this.retry(fn, retries - 1, delay * 2);
-      }
-
-      throw error;
-    }
+    private readonly googleService: GoogleService,
+  ) {
+    this.authUrl = this.configService.getOrThrow<string>("ZOHO_AUTH_URL");
+    this.clientId = this.configService.getOrThrow<string>("ZOHO_CLIENT_ID");
+    this.clientSecret =
+      this.configService.getOrThrow<string>("ZOHO_CLIENT_SECRET");
+    this.redirectUri =
+      this.configService.getOrThrow<string>("ZOHO_REDIRECT_URI");
+    this.scopes = this.configService.getOrThrow<string>("ZOHO_OAUTH_SCOPES");
+    this.projectApiBaseUrl = this.configService.getOrThrow<string>(
+      "ZOHO_PROJECT_API_BASE_URL",
+    );
   }
 
-  getAuthorizationUrl(id: string) {
-    this.logger.debug(`Logger user id ${id}`);
+  getAuthorizationUrl(userId: string): string {
+    this.logger.debug(`Generating Zoho auth URL for user: ${userId}`);
 
     return createOAuthAuthorizeUrl({
-      baseUrl: this.configService.getOrThrow("ZOHO_AUTH_URL"),
-      clientId: this.configService.getOrThrow("ZOHO_CLIENT_ID"),
-      redirectUri: this.configService.getOrThrow("ZOHO_REDIRECT_URI"),
-      scope: this.configService.getOrThrow("ZOHO_OAUTH_SCOPES"),
-      state: id,
+      baseUrl: this.authUrl,
+      clientId: this.clientId,
+      redirectUri: this.redirectUri,
+      scope: this.scopes,
+      state: userId,
     });
   }
 
-  async generateToken(code: string, id: string) {
-    const accountsUrl = this.configService.get<string>("ZOHO_AUTH_URL");
-
-    const response = await this.apiService.request({
-      url: `${accountsUrl}/oauth/v2/token`,
-      method: "POST",
-      params: {
-        grant_type: "authorization_code",
-        client_id: this.configService.get("ZOHO_CLIENT_ID"),
-        client_secret: this.configService.get("ZOHO_CLIENT_SECRET"),
-        redirect_uri: this.configService.get("ZOHO_REDIRECT_URI"),
-        code,
-      },
+  async generateToken(
+    code: string,
+    userId: string,
+  ): Promise<ZohoTokenResponse> {
+    const response = await this.exchangeToken({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: this.redirectUri,
     });
-    this.logger.log("Zoho token response: ", JSON.stringify(response));
-    if (!response) {
-      throw new Error("Failed to generate Zoho token");
-    }
-    if (response.refresh_token && response.access_token) {
-      this.logger.debug(`Fetching list of portals available on zoho projects`);
-      const portalDetials = await this.fetchPortals(response.access_token);
-      this.logger.debug(
-        `Fetched list of portals available on zoho projects ${JSON.stringify(portalDetials)}`,
-      );
-      await this.userService.udpateZohoDetails(
-        id,
-        response.refresh_token,
-        portalDetials.find((portal: any) => portal.portal_name === "amwhizcom"),
-      );
+
+    if (!response?.refresh_token || !response?.access_token) {
+      throw new InternalServerErrorException("Failed to generate Zoho tokens");
     }
 
-    return response;
-  }
+    this.logger.debug("Fetching Zoho portals");
 
-  async generateAccessToken(refreshToken: string) {
-    const accountsUrl = this.configService.get<string>("ZOHO_AUTH_URL");
+    const portals: any = await this.fetchPortals(response.access_token);
 
-    const response = await this.apiService.request({
-      url: `${accountsUrl}/oauth/v2/token`,
-      method: "POST",
-      params: {
-        grant_type: "refresh_token",
-        client_id: this.configService.get("ZOHO_CLIENT_ID"),
-        client_secret: this.configService.get("ZOHO_CLIENT_SECRET"),
-        refresh_token: refreshToken,
-      },
-    });
+    const defaultPortal = portals.find(
+      (portal: any) => portal.portal_name === "amwhizcom",
+    );
 
-    return response;
-  }
-
-  async fetchPortals(accessToken: string) {
-    this.logger.debug("Fetching list of portals available on zoho projects");
-    const response = await this.apiService.request({
-      url: `${this.configService.getOrThrow("ZOHO_PROJECT_API_BASE_URL")}portals`,
-      method: "GET",
-      headers: {
-        Authorization: `Zoho-oauthtoken ${accessToken}`,
-      },
-    });
-    this.logger.debug(
-      `Fetched list of portals available on zoho projects ${JSON.stringify(response)}`,
+    await this.userService.udpateZohoDetails(
+      userId,
+      response.refresh_token,
+      defaultPortal,
     );
 
     return response;
+  }
+
+  async generateAccessToken(refreshToken: string): Promise<string> {
+    const response = await this.exchangeToken({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    });
+    this.logger.debug("Zoho access token refreshed done");
+    if (!response?.access_token) {
+      throw new InternalServerErrorException("Failed to generate access token");
+    }
+
+    return response.access_token;
+  }
+
+  async requestZohoProject<T = unknown>(
+    accessToken: string,
+    options: {
+      url: string;
+      method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+      params?: Record<string, unknown>;
+      data?: unknown;
+      headers?: Record<string, string>;
+    },
+  ): Promise<T> {
+    return this.apiService.request<T>({
+      ...options,
+      url: `${this.projectApiBaseUrl}${options.url}`,
+      headers: {
+        Authorization: `Zoho-oauthtoken ${accessToken}`,
+        ...options.headers,
+      },
+    });
+  }
+  async fetchPortals(accessToken: string) {
+    this.logger.debug("Fetching Zoho portals");
+
+    return this.requestZohoProject(accessToken, {
+      url: "portals",
+      method: "GET",
+    });
   }
 
   async fetchProjects(
@@ -120,38 +142,94 @@ export class ZohoService {
     refreshToken: string,
     user: UserDocument,
   ) {
-    this.logger.debug(
-      "Fetching list of projects available on zoho projects",
-      portalId,
-    );
-    const url = `${this.configService.getOrThrow("ZOHO_PROJECT_API_BASE_URL")}portal/${portalId}/projects`;
-    this.logger.debug(
-      "Fetching list of projects available on zoho projects via url",
-      url,
-    );
-    const accessToken = (await this.generateAccessToken(refreshToken))
-      ?.access_token;
+    this.logger.debug(`Fetching projects for portal: ${portalId}`);
+
     try {
-      const response = await this.apiService.request({
-        url,
+      const accessToken = await this.generateAccessToken(refreshToken);
+
+      const response: any = await this.requestZohoProject(accessToken, {
+        url: `portal/${portalId}/projects`,
         method: "GET",
-        headers: {
-          Authorization: `Zoho-oauthtoken ${accessToken}`,
-        },
       });
-      const { team_members } = response?.[0] ?? {};
-      const zohoUserId = team_members?.find(
-        (member: any) =>
-          member.email?.toLowerCase() === user.email.toLowerCase(),
-      )?.zpuid;
-      await this.userService.udpateZohoUser(user._id.toString(), zohoUserId);
+
+      const zohoUserId = response
+        .flatMap((item: any) => item.team_members)
+        .find(
+          (member: any) =>
+            member.email?.toLowerCase() === user.email.toLowerCase(),
+        )?.zpuid;
+
+      if (zohoUserId) {
+        await this.userService.udpateZohoUser(user._id.toString(), zohoUserId);
+      }
 
       return response;
-    } catch (e: any) {
+    } catch (error) {
       this.logger.error(
-        `Failed to fetch projects from zoho ${JSON.stringify(e)}`,
-        JSON.stringify(e),
+        `Failed to fetch projects for portal ${portalId}`,
+        error instanceof Error ? error.stack : JSON.stringify(error),
+      );
+
+      throw new InternalServerErrorException("Failed to fetch Zoho projects");
+    }
+  }
+
+  private async exchangeToken(
+    params: Record<string, unknown>,
+  ): Promise<ZohoTokenResponse> {
+    return this.apiService.request<ZohoTokenResponse>({
+      url: `${this.authUrl}/oauth/v2/token`,
+      method: "POST",
+      params: {
+        client_id: this.clientId,
+        client_secret: this.clientSecret,
+        ...params,
+      },
+    });
+  }
+
+  async getLog(user: UserDocument) {
+    const date = format(new Date(), "yyyy-MM-dd");
+    const { portal, zohoUserId, zohoRefreshToken } = user?.configuration;
+    const accessToken = await this.generateAccessToken(zohoRefreshToken);
+    const response: any = await this.requestZohoProject(accessToken, {
+      url: `portal/${portal?.id}/timelogs`,
+      method: "GET",
+      params: getLogBuiilder(zohoUserId, date),
+    });
+    this.logger.log(
+      `Total hours ${response.log_hours?.total_hours ?? 0} from ${date} for ${zohoUserId} - ${user.email}`,
+    );
+    return sendResponse(response);
+  }
+
+  async sendStatusMail(payload: StatusMailPayload, user: UserDocument) {
+    this.logger.debug(`Send Mail ${JSON.stringify(payload)}`);
+    if (!payload?.logs?.length) return;
+    const htmlContent = htmlGenerator(payload);
+    return await this.googleService.sendMail(
+      user.configuration.googleRefreshToken,
+      user.email,
+      generateSubject(payload.logs[0]?.name, payload.reportDate),
+      htmlContent,
+    );
+  }
+
+  async triggerJob(user: UserDocument) {
+    if (!user.configuration.zohoRefreshToken) {
+      throw new NotImplementedException("Your Zoho account is not connected");
+    }
+    if (!user.configuration.zohoUserId) {
+      throw new NotImplementedException(
+        "Your Zoho Project's portal is not connected, update the portal details",
       );
     }
+    if (!user.configuration.googleRefreshToken) {
+      throw new NotImplementedException(
+        "Revalidate on Google OAuth",
+      );
+    }
+    const logs = await this.getLog(user);
+    return await this.sendStatusMail(logs as StatusMailPayload, user);
   }
 }

@@ -10,6 +10,9 @@ export class UsersService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
   ) {}
+  findAll(){
+    return this.userModel.find().exec();
+  }
 
   findByEmail(email: string) {
     return this.userModel.findOne({ email: email.toLowerCase() }).exec();
@@ -32,14 +35,14 @@ export class UsersService {
         email: profile.email,
         userProfileUrl: profile.picture ?? null,
         configuration: {
-          validatedGoogle: true,
+          validatedGoogle: !!refreshToken,
           googleRefreshToken: refreshToken || null,
         },
       });
       return user.save();
     }
 
-    user.configuration.validatedGoogle = true;
+    user.configuration.validatedGoogle = !!refreshToken;
     if (refreshToken) {
       user.configuration.googleRefreshToken = refreshToken;
     }
@@ -108,7 +111,7 @@ export class UsersService {
   }
 
   async updateUserDetails(id: string, userData: User) {
-    this.logger.debug("updateUserDetails", id, userData);
+    this.logger.debug("updateUserDetails", id, JSON.stringify(userData));
     const user = await this.userModel
       .findByIdAndUpdate(id, { ...userData }, { new: true })
       .exec();

@@ -40,4 +40,15 @@ export class ZohoController {
       `${frontendUrl}/connect?path=${encodeURIComponent("/settings?tab=oauth&status=success&Module=zoho")}`,
     );
   }
+  @Get("log")
+  @UseGuards(JwtAuthGuard)
+  async getLog(@Req() req: any) {
+    return await this.zohoService.getLog(req?.user);
+  }
+
+  @Get("log/draft-mail")
+  @UseGuards(JwtAuthGuard)
+  async getLogDraftMail(@Req() req: any) {
+   return await this.zohoService.triggerJob(req.user)
+  }
 }
