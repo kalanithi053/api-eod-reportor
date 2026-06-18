@@ -25,6 +25,9 @@ export class SheetConfiguration {
 
   @Prop({ default: null })
   dateIndex!: number;
+
+  @Prop({ default: null })
+  projectIndex!: number;
 }
 
 export const SheetConfigurationSchema =
@@ -33,6 +36,18 @@ export const SheetConfigurationSchema =
 // --------------------
 // User Configuration
 // --------------------
+
+@Schema({ _id: false })
+export class Portal {
+  @Prop({ type: String })
+  id!: string;
+
+  @Prop()
+  name!: string;
+}
+
+export const PortalSchema = SchemaFactory.createForClass(Portal);
+
 @Schema({ _id: false })
 export class UserConfiguration {
   @Prop({ default: false })
@@ -50,14 +65,20 @@ export class UserConfiguration {
   @Prop({ default: null })
   cronOption!: string;
 
-  @Prop({ default: null })
-  protalId!:string;
+  @Prop({ type: PortalSchema, default: null })
+  portal!: Portal | null;
 
   @Prop({ default: null })
   zohoUserId!: string;
 
-  @Prop({ type: [String], default: [] })
-  projects!: string[];
+  @Prop({
+    type: [PortalSchema],
+    default: [],
+  })
+  projects!: Portal[];
+
+  @Prop({ type: PortalSchema, default: null })
+  defaultProject!: Portal | null;
 
   @Prop({ type: SheetConfigurationSchema, default: null })
   sheet!: SheetConfiguration | null;

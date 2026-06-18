@@ -17,6 +17,17 @@ export class ZohoController {
     return this.zohoService.getAuthorizationUrl(req?.user?._id);
   }
 
+  @Get("projects")
+  @UseGuards(JwtAuthGuard)
+  getProjects(@Req() req: any) {
+    const projects = this.zohoService.fetchProjects(
+      req?.user?.configuration?.portal?.id,
+      req?.user?.configuration?.zohoRefreshToken,
+      req?.user,
+    );
+    return projects;
+  }
+
   @Get("callback")
   async callback(
     @Query("code") code: string,

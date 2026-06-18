@@ -17,4 +17,13 @@ export class UsersController {
   updateUserDetails(@Req() req: any) {
     return this.usersService.updateUserDetails(req?.user?._id, req.body);
   }
+  @Patch("zoho-projects")
+  @UseGuards(JwtAuthGuard)
+  updateZohoProject(@Req() req: any) {
+    return this.usersService.updateZohoProject(
+      req?.user?._id,
+      req.body.projects,
+      req.body.defaultProject,
+    );
+  }
 }

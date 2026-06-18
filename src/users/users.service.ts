@@ -2,7 +2,7 @@ import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { GoogleProfile } from "../auth/interfaces/google-profile.interface";
-import { User, UserDocument } from "./schemas/user.schema";
+import { Portal, User, UserDocument } from "./schemas/user.schema";
 
 @Injectable()
 export class UsersService {
@@ -60,6 +60,40 @@ export class UsersService {
     return user.save();
   }
 
+  async udpateZohoDetails(
+    id: string,
+    refreshToken: string,
+    portalDetails: { id: string; portal_name: string },
+  ) {
+    let user = await this.findById(id);
+    this.logger.debug(
+      "Fetched default portal details",
+      JSON.stringify(portalDetails),
+    );
+
+    if (!user) throw new NotFoundException("user not found");
+
+    user.configuration.validatedZoho = true;
+    user.configuration.zohoRefreshToken = refreshToken;
+    user.configuration.portal = {
+      id: portalDetails?.id,
+      name: portalDetails?.portal_name,
+    };
+
+    return user.save();
+  }
+
+  async udpateZohoUser(id: string, zohoUserId: string) {
+    let user = await this.findById(id);
+    this.logger.debug("Fetched default zohoUserId", JSON.stringify(zohoUserId));
+
+    if (!user) throw new NotFoundException("user not found");
+
+    user.configuration.zohoUserId = zohoUserId;
+
+    return user.save();
+  }
+
   async revokeZohoRefreshToken(id: string): Promise<UserDocument> {
     this.logger.debug("revokeZohoRefreshToken", id);
     let user = await this.findById(id);
@@ -68,7 +102,8 @@ export class UsersService {
 
     user.configuration.validatedZoho = false;
     user.configuration.zohoRefreshToken = "";
-
+    user.configuration.portal = null;
+    user.configuration.projects = [];
     return user.save();
   }
 
@@ -81,5 +116,20 @@ export class UsersService {
       throw new NotFoundException("user not found");
     }
     return user;
+  }
+
+  async updateZohoProject(
+    id: string,
+    projects: Portal[],
+    defaultProject: Portal,
+  ) {
+    this.logger.debug("updateZohoProject", id);
+    this.logger.debug(`Selected Projects ${JSON.stringify(projects)}`);
+    this.logger.debug(`Default Projects ${JSON.stringify(defaultProject)}`);
+    let user = await this.findById(id);
+    if (!user) throw new NotFoundException("user not found");
+    user.configuration.projects = projects;
+    user.configuration.defaultProject = defaultProject;
+    return user.save();
   }
 }
