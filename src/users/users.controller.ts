@@ -36,7 +36,7 @@ export class UsersController {
     const users = await this.usersService.findAll();
     const response = await Promise.all([
       users
-        .filter((user) => user.configuration.triggerCron && user.configuration.validatedGoogle)
+        .filter((user) => user.configuration.triggerCron)
         .map((user) => this.zohoService.triggerJob(user)),
     ]);
     return response;
