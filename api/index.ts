@@ -32,11 +32,9 @@ async function bootstrap(): Promise<express.Express> {
   const nodeEnv = config.get<string>("NODE_ENV") ?? "DEV";
 
   app.setGlobalPrefix("api/v1");
-  const cors = config.getOrThrow<string>("CORS").split(";");
   app.setGlobalPrefix("api/v1");
   app.enableCors({
-    origin: cors,
-    credentials: true,
+    origin: "*",
   });
 
   app.useGlobalPipes(
