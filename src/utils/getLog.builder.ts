@@ -5,7 +5,7 @@ export type GetTimeLog = {
   startDate: string;
 };
 
-export const getLogBuiilder = (zohoUserId:string, startDate:string) => {
+export const getLogBuiilder = (zohoUserId: string, startDate: string) => {
   return {
     page: 1,
     per_page: 500,
@@ -48,42 +48,71 @@ type LogEntry = {
 };
 
 export const sendResponse = (response: Record<string, any>) => {
-  if (!response?.time_logs?.length) return { totalHours: 0, logs: [] };
-  const logs: LogEntry[] =
-    response.time_logs?.flatMap((day: any) =>
-      day.log_details.map(
-        (log: any): LogEntry => ({
-          date: log.date,
-          task: log.module_detail?.name,
-          duration: log.log_hour,
-          name: log.owner?.first_name,
-        }),
-      ),
-    ) ?? [];
-  const mergedLogs = Object.values(
-    logs.reduce<Record<string, LogEntry>>((acc, log) => {
-      if (!acc[log.task]) {
-        acc[log.task] = { ...log };
-      } else {
-        acc[log.task].duration = addDurations(
-          acc[log.task].duration,
-          log.duration,
-        );
+  if (!response?.time_logs?.length) {
+    return {
+      totalHours: "0:00",
+      resourceName: "",
+      reportDate: "",
+      projects: [],
+    };
+  }
+
+  const projectMap: Record<string, LogEntry[]> = {};
+
+  response.time_logs.forEach((day: any) => {
+    day.log_details?.forEach((log: any) => {
+      const projectName = log.project?.name ?? "Unknown Project";
+
+      const entry: LogEntry = {
+        date: log.date,
+        task: log.module_detail?.name ?? "",
+        duration: log.log_hour ?? "0:00",
+        name: log.owner?.first_name ?? "",
+      };
+
+      if (!projectMap[projectName]) {
+        projectMap[projectName] = [];
       }
 
-      return acc;
-    }, {}),
+      projectMap[projectName].push(entry);
+    });
+  });
+
+  const projects = Object.entries(projectMap).map(
+    ([name, logs]): {
+      name: string;
+      logs: LogEntry[];
+    } => {
+      const mergedLogs = Object.values(
+        logs.reduce<Record<string, LogEntry>>((acc, log) => {
+          if (!acc[log.task]) {
+            acc[log.task] = { ...log };
+          } else {
+            acc[log.task].duration = addDurations(
+              acc[log.task].duration,
+              log.duration,
+            );
+          }
+
+          return acc;
+        }, {}),
+      );
+
+      return {
+        name,
+        logs: mergedLogs,
+      };
+    },
   );
 
+  const firstLog = response.time_logs?.[0]?.log_details?.[0];
+
   return {
-    totalHours: response.log_hours?.total_hours,
-    projectName: response.time_logs?.[0]?.log_details?.[0]?.project?.name ?? "",
-    reportDate: format(
-      parseISO(response?.time_logs[0]?.log_details[0]?.date),
-      "EEEE, MMMM d, yyyy",
-    ),
-    resourceName:
-      response.time_logs?.[0]?.log_details?.[0]?.owner?.first_name ?? "",
-    logs: mergedLogs,
+    totalHours: response.log_hours?.total_hours ?? "0:00",
+    resourceName: firstLog?.owner?.first_name ?? "",
+    reportDate: firstLog?.date
+      ? format(parseISO(firstLog.date), "EEEE, MMMM d, yyyy")
+      : "",
+    projects,
   };
 };

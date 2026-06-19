@@ -5,10 +5,23 @@ export interface StatusLog {
   name: string;
 }
 
+export interface StatusLog {
+  date: string;
+  task: string;
+  duration: string;
+  name: string;
+}
+
+export interface StatusProject {
+  name: string;
+  logs: StatusLog[];
+}
+
 export interface StatusMailPayload {
   reportDate: string;
-  projectName: string;
   totalHours: string;
   resourceName: string;
-  logs: StatusLog[];
+  projects: StatusProject[];
+  singleProject?: boolean;
+  multipleProjects?: boolean;
 }

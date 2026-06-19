@@ -204,11 +204,21 @@ export class ZohoService {
 
   async sendStatusMail(payload: StatusMailPayload, user: UserDocument) {
     this.logger.debug(`Send Mail ${JSON.stringify(payload)}`);
-    if (!payload?.logs?.length) return;
-    const htmlContent = htmlGenerator(payload);
+
+    if (!payload?.projects?.length) return;
+
+    const htmlContent = htmlGenerator({
+      ...payload,
+      multipleProjects: payload.projects.length > 1,
+      singleProject: payload.projects.length === 1,
+    });
+
+    const resourceName =
+      payload.resourceName || payload.projects[0]?.logs?.[0]?.name || "";
+
     return await this.googleService.sendMail(
       user,
-      generateSubject(payload.logs[0]?.name, payload.reportDate),
+      generateSubject(resourceName, payload.reportDate),
       htmlContent,
     );
   }
