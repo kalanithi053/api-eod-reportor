@@ -4,6 +4,7 @@ import {
   Logger,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { format } from "date-fns/format";
 import { ApiService } from "../common/api.service";
 import { GoogleService } from "../google/google.service";
 import { StatusMailPayload } from "../types/report.interface";
@@ -187,8 +188,7 @@ export class ZohoService {
   }
 
   async getLog(user: UserDocument) {
-    // const date = format(new Date(), "yyyy-MM-dd");
-    const date = "2026-06-17";
+    const date = format(new Date(), "yyyy-MM-dd");
     const { portal, zohoUserId, zohoRefreshToken } = user?.configuration;
     const accessToken = await this.generateAccessToken(zohoRefreshToken);
     const response: any = await this.requestZohoProject(accessToken, {
