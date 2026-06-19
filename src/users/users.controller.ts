@@ -1,6 +1,6 @@
 import { Controller, Get, Patch, Req, UseGuards } from "@nestjs/common";
-import { JwtAuthGuard } from "src/guards/jwt-auth.guard";
-import { ZohoService } from "src/zoho/zoho.service";
+import { JwtAuthGuard } from "../guards/jwt-auth.guard";
+import { ZohoService } from "../zoho/zoho.service";
 import { UsersService } from "./users.service";
 
 @Controller("users")

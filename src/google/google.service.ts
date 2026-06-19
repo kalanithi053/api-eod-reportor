@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { google, sheets_v4 } from "googleapis";
 import * as nodemailer from "nodemailer";
-import { UserDocument } from "src/users/schemas/user.schema";
+import { UserDocument } from "../users/schemas/user.schema";
 
 @Injectable()
 export class GoogleService {

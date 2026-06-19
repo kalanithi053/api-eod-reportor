@@ -4,15 +4,15 @@ import {
   Logger,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { ApiService } from "src/common/api.service";
-import { GoogleService } from "src/google/google.service";
-import { StatusMailPayload } from "src/types/report.interface";
-import { UserDocument } from "src/users/schemas/user.schema";
-import { UsersService } from "src/users/users.service";
-import { getLogBuiilder, sendResponse } from "src/utils/getLog.builder";
-import { htmlGenerator } from "src/utils/mail-template";
-import { createOAuthAuthorizeUrl } from "src/utils/oauth.util";
-import { generateSubject } from "src/utils/stringManipulation.helper";
+import { ApiService } from "../common/api.service";
+import { GoogleService } from "../google/google.service";
+import { StatusMailPayload } from "../types/report.interface";
+import { UserDocument } from "../users/schemas/user.schema";
+import { UsersService } from "../users/users.service";
+import { getLogBuiilder, sendResponse } from "../utils/getLog.builder";
+import { htmlGenerator } from "../utils/mail-template";
+import { createOAuthAuthorizeUrl } from "../utils/oauth.util";
+import { generateSubject } from "../utils/stringManipulation.helper";
 
 interface ZohoTokenResponse {
   access_token?: string;

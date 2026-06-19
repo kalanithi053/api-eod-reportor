@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import axios, { AxiosRequestConfig, Method } from "axios";
-import { throwIfZohoError } from "src/utils/zoho.utils";
+import { throwIfZohoError } from "../utils/zoho.utils";
 
 export interface RequestOptions {
   url: string;

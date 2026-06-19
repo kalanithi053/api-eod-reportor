@@ -30,8 +30,8 @@ async function bootstrap() {
   );
   app.useGlobalFilters(new HttpExceptionFilter());
   const swaggerConfig = new DocumentBuilder()
-    .setTitle(`Zoho Eod App - (${nodeEnv})`)
-    .setDescription("zoho-eod API Documentation")
+    .setTitle(`Eod Reportor - (${nodeEnv})`)
+    .setDescription("Eod Reportor  API Documentation")
     .setVersion("1.0")
     .addBearerAuth()
     .build();

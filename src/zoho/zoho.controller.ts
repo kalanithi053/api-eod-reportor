@@ -1,7 +1,7 @@
 import { Controller, Get, Query, Req, Res, UseGuards } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Response } from "express";
-import { JwtAuthGuard } from "src/guards/jwt-auth.guard";
+import { JwtAuthGuard } from "../guards/jwt-auth.guard";
 import { ZohoService } from "./zoho.service";
 
 @Controller("zoho")
@@ -49,6 +49,6 @@ export class ZohoController {
   @Get("log/draft-mail")
   @UseGuards(JwtAuthGuard)
   async getLogDraftMail(@Req() req: any) {
-   return await this.zohoService.triggerJob(req.user)
+    return await this.zohoService.triggerJob(req.user);
   }
 }

@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import Handlebars from "handlebars";
 import * as path from "path";
-import { StatusMailPayload } from "src/types/report.interface";
+import { StatusMailPayload } from "../types/report.interface";
 
 export const htmlGenerator = (data: StatusMailPayload) => {
   const templatePathCandidates = [

@@ -1,9 +1,9 @@
 import { Module } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
-import { ApiService } from "src/common/api.service";
-import { GoogleService } from "src/google/google.service";
-import { User, UserSchema } from "src/users/schemas/user.schema";
-import { UsersService } from "src/users/users.service";
+import { ApiService } from "../common/api.service";
+import { GoogleService } from "../google/google.service";
+import { User, UserSchema } from "../users/schemas/user.schema";
+import { UsersService } from "../users/users.service";
 import { ZohoController } from "./zoho.controller";
 import { ZohoService } from "./zoho.service";
 
