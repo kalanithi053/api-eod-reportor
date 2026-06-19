@@ -28,11 +28,25 @@ export class SheetConfiguration {
 
   @Prop({ default: null })
   projectIndex!: number;
-
 }
 
 export const SheetConfigurationSchema =
   SchemaFactory.createForClass(SheetConfiguration);
+@Schema({ _id: false })
+export class RecipientConfigurations {
+  @Prop({ default: [] })
+  eodMailTo!: string[];
+
+  @Prop({ default: [] })
+  eodMailCc!: string[];
+
+  @Prop({ default: [] })
+  eodMailBcc!: string[];
+}
+
+export const RecipientConfigurationsSchema = SchemaFactory.createForClass(
+  RecipientConfigurations,
+);
 
 // --------------------
 // User Configuration
@@ -84,8 +98,8 @@ export class UserConfiguration {
   @Prop({ type: SheetConfigurationSchema, default: null })
   sheet!: SheetConfiguration | null;
 
-  @Prop({ default: null })
-  eodMailRecipient!: string;
+  @Prop({ type: RecipientConfigurationsSchema, default: null })
+  recipient!: RecipientConfigurations | null;
 
   @Prop({ default: null })
   jobFailureTriggerRecipient!: string;

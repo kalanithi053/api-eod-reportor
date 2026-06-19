@@ -2,10 +2,8 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
-  NotImplementedException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { format } from "date-fns/format";
 import { ApiService } from "src/common/api.service";
 import { GoogleService } from "src/google/google.service";
 import { StatusMailPayload } from "src/types/report.interface";
@@ -189,7 +187,8 @@ export class ZohoService {
   }
 
   async getLog(user: UserDocument) {
-    const date = format(new Date(), "yyyy-MM-dd");
+    // const date = format(new Date(), "yyyy-MM-dd");
+    const date = "2026-06-17";
     const { portal, zohoUserId, zohoRefreshToken } = user?.configuration;
     const accessToken = await this.generateAccessToken(zohoRefreshToken);
     const response: any = await this.requestZohoProject(accessToken, {
@@ -208,8 +207,7 @@ export class ZohoService {
     if (!payload?.logs?.length) return;
     const htmlContent = htmlGenerator(payload);
     return await this.googleService.sendMail(
-      user.configuration.googleRefreshToken,
-      user.email,
+      user,
       generateSubject(payload.logs[0]?.name, payload.reportDate),
       htmlContent,
     );
@@ -217,16 +215,21 @@ export class ZohoService {
 
   async triggerJob(user: UserDocument) {
     if (!user.configuration.zohoRefreshToken) {
-      throw new NotImplementedException("Your Zoho account is not connected");
+      throw new InternalServerErrorException(
+        "Your Zoho account is not connected",
+      );
     }
     if (!user.configuration.zohoUserId) {
-      throw new NotImplementedException(
+      throw new InternalServerErrorException(
         "Your Zoho Project's portal is not connected, update the portal details",
       );
     }
     if (!user.configuration.googleRefreshToken) {
-      throw new NotImplementedException(
-        "Revalidate on Google OAuth",
+      throw new InternalServerErrorException("Revalidate on Google OAuth");
+    }
+    if (!user.configuration.recipient?.eodMailTo?.length) {
+      throw new InternalServerErrorException(
+        "Atleast One Primary recipients of the daily summary is required",
       );
     }
     const logs = await this.getLog(user);

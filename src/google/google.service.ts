@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { google, sheets_v4 } from "googleapis";
 import * as nodemailer from "nodemailer";
-import { recipent } from "src/common/recipent";
+import { UserDocument } from "src/users/schemas/user.schema";
 
 @Injectable()
 export class GoogleService {
@@ -58,21 +58,24 @@ export class GoogleService {
   }
 
   async sendMail(
-    accessToken: string,
-    email:string,
+    user: UserDocument,
     subject: string,
     html: string,
   ): Promise<void> {
-    const transporter = await this.configTransporter(accessToken, email);
-    const nodeEnv = this.getConfig("NODE_ENV");
+    const { email, configuration, name } = user;
+    const transporter = await this.configTransporter(
+      configuration?.googleRefreshToken,
+      email,
+    );
     await transporter.verify();
-
-    const emails = recipent[nodeEnv as keyof typeof recipent] ?? recipent.DEV;
+    console.log(configuration);
     const result = await transporter.sendMail({
-      ...emails,
-      from: emails.sender,
+      from: { address: email, name },
       subject,
       html,
+      to: configuration?.recipient?.eodMailTo,
+      cc: configuration?.recipient?.eodMailCc,
+      bcc: configuration?.recipient?.eodMailBcc,
     });
 
     this.logger.log(`Email sent. MessageId: ${result.messageId}`);
