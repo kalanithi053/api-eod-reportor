@@ -1,10 +1,11 @@
-import { Controller, Get, Patch, Req, UseGuards } from "@nestjs/common";
+import { Controller, Get, Logger, Patch, Req, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../guards/jwt-auth.guard";
 import { ZohoService } from "../zoho/zoho.service";
 import { UsersService } from "./users.service";
 
 @Controller("users")
 export class UsersController {
+  private logger = new Logger(UsersController.name);
   constructor(
     private readonly usersService: UsersService,
     private readonly zohoService: ZohoService,
@@ -34,11 +35,15 @@ export class UsersController {
   @Get("trigger/cron-job")
   async triggerJob() {
     const users = await this.usersService.findAll();
-    const response = await Promise.all([
-      users
-        .filter((user) => user.configuration.triggerCron)
-        .map((user) => this.zohoService.triggerJob(user)),
-    ]);
-    return response;
+    const triggerCron = users.filter((user) => user.configuration.triggerCron);
+    const results = [];
+    this.logger.debug(
+      `Cron enabled users ${triggerCron.map((u) => u.email).join(";")}`,
+    );
+    for (const user of triggerCron) {
+      results.push(await this.zohoService.triggerJob(user));
+    }
+    this.logger.debug(`result ${JSON.stringify(results)}`);
+    return results;
   }
 }

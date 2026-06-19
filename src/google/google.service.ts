@@ -57,11 +57,7 @@ export class GoogleService {
     });
   }
 
-  async sendMail(
-    user: UserDocument,
-    subject: string,
-    html: string,
-  ): Promise<void> {
+  async sendMail(user: UserDocument, subject: string, html: string) {
     const { email, configuration, name } = user;
     const transporter = await this.configTransporter(
       configuration?.googleRefreshToken,
@@ -79,6 +75,7 @@ export class GoogleService {
     });
 
     this.logger.log(`Email sent. MessageId: ${result.messageId}`);
+    return result;
   }
 
   async getSheetRows(
